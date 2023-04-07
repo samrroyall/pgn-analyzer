@@ -1,0 +1,11 @@
+[package]
+name = "pgn-analyzer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pleco = "0.5.0"
+stylist = { version = "0.12.0", features = [ "yew" ] }
+yew = { version = "0.20.0", features = [ "csr" ] }
