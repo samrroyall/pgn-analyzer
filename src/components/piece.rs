@@ -46,7 +46,6 @@ pub struct PieceProps {
 #[styled_component(PieceUi)]
 pub fn piece(props: &PieceProps) -> Html {
     let piece_styles = css!(r#"
-        cursor: pointer;
         font-size: 3rem;
     "#);
 

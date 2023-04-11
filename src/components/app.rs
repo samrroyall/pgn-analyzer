@@ -1,45 +1,80 @@
-use std::rc::Rc;
-
 use crate::components::board::BoardUi;
+
 use pleco::Board;
 use stylist::yew::styled_component;
-use yew::{html, Html, Reducible, use_reducer};
+use web_sys::HtmlInputElement;
+use yew::prelude::*;
+use yewdux::prelude::*;
 
-enum BoardAction {
-    ApplyMove(String),
-}
-
-struct BoardState {
+#[derive(Clone, PartialEq, Store)]
+struct AppState {
     board: Board,
+    error: Option<String>,
 }
 
-impl Default for BoardState {
+impl Default for AppState {
     fn default() -> Self {
-        Self { board: Board::start_pos() }
-    }
-}
-
-impl Reducible for BoardState {
-    type Action = BoardAction;
-
-    fn reduce(self: Rc<Self>, action: Self::Action) -> Rc<Self> {
-        let next_board = match action {
-            BoardAction::ApplyMove(uci_move) => {
-                let mut board = self.board.shallow_clone();
-                assert!(board.apply_uci_move(uci_move.as_str()));
-                board
-            },
-        };
-
-        Self { board: next_board }.into()
+        Self { 
+            board: Board::start_pos(),
+            error: None,
+        }
     }
 }
 
 #[styled_component(App)]
 pub fn app() -> Html {
-    let board = use_reducer(BoardState::default);
+    let (store, dispatch) = use_store::<AppState>();
+
+    let onchange = dispatch.reduce_callback_with(|state, e: Event| {
+        let input = e.target_unchecked_into::<HtmlInputElement>();
+
+        let mut new_board = state.board.shallow_clone();
+
+        if let Ok(uci_move) = input.value().parse::<String>() {
+            if uci_move.len() == 0 {
+                return AppState {
+                    board: new_board,
+                    error: None,
+                }.into();
+            }
+
+            let move_success = new_board.apply_uci_move(uci_move.as_str());
+
+            if move_success {
+                AppState {
+                    board: new_board,
+                    error: None,
+                }.into()
+            } else {
+                AppState {
+                    board: new_board,
+                    error: Some(String::from("Invalid move provided")),
+                }.into()
+            }
+            
+        } else {
+            AppState {
+                board: new_board,
+                error: Some(String::from("Unable to parse input value")),
+            }.into()
+        }
+    });
+
+    let container_styles = css!(r#"
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    "#);
 
     html! {
-        <BoardUi board_str={board.board.pretty_string()} />
+        <div class={container_styles}>
+            <BoardUi board_str={store.board.pretty_string()} />
+            <span style="color: red;"> { store.error.as_ref().unwrap_or(&String::new()) } </span>
+            <input
+                {onchange}
+                placeholder="Paste UCI move here..."
+            />
+        </div>
     }
 }
